@@ -3,8 +3,9 @@ package lexer
 import (
 	"bytes"
 	"fmt"
-	"github.com/gobwas/glob/util/runes"
 	"unicode/utf8"
+
+	"github.com/gobwas/glob/util/runes"
 )
 
 const (
@@ -16,6 +17,8 @@ const (
 	char_range_close   = ']'
 	char_terms_open    = '{'
 	char_terms_close   = '}'
+	char_capture_open  = '('
+	char_capture_close = ')'
 	char_range_not     = '!'
 	char_range_between = '-'
 )
@@ -28,6 +31,8 @@ var specials = []byte{
 	char_range_close,
 	char_terms_open,
 	char_terms_close,
+	char_capture_open,
+	char_capture_close,
 }
 
 func Special(c byte) bool {
@@ -60,6 +65,7 @@ type lexer struct {
 
 	tokens     tokens
 	termsLevel int
+	inCapture  bool
 
 	lastRune     rune
 	lastRuneSize int
@@ -146,7 +152,23 @@ func (l *lexer) termsLeave() {
 	l.termsLevel--
 }
 
-var inTextBreakers = []rune{char_single, char_any, char_range_open, char_terms_open}
+func (l *lexer) captureEnter() {
+	if l.inCapture {
+		l.errorf("unexpected open capture character")
+		return
+	}
+	l.inCapture = true
+}
+
+func (l *lexer) captureLeave() {
+	if !l.inCapture {
+		l.errorf("unexpected close capture character")
+		return
+	}
+	l.inCapture = false
+}
+
+var inTextBreakers = []rune{char_single, char_any, char_range_open, char_terms_open, char_capture_open}
 var inTermsBreakers = append(inTextBreakers, char_terms_close, char_comma)
 
 func (l *lexer) fetchItem() {
@@ -169,6 +191,14 @@ func (l *lexer) fetchItem() {
 	case r == char_range_open:
 		l.tokens.push(Token{RangeOpen, string(r)})
 		l.fetchRange()
+
+	case r == char_capture_open:
+		l.tokens.push(Token{CaptureOpen, string(r)})
+		l.captureEnter()
+
+	case r == char_capture_close:
+		l.tokens.push(Token{CaptureClose, string(r)})
+		l.captureLeave()
 
 	case r == char_single:
 		l.tokens.push(Token{Single, string(r)})
