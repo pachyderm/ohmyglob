@@ -89,6 +89,7 @@ const (
 	KindPattern
 	KindList
 	KindRange
+	KindCapture
 	KindText
 	KindAny
 	KindSuper
@@ -106,6 +107,8 @@ func (k Kind) String() string {
 		return "List"
 	case KindRange:
 		return "Range"
+	case KindCapture:
+		return "Capture"
 	case KindText:
 		return "Text"
 	case KindAny:

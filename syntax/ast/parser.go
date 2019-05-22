@@ -3,8 +3,9 @@ package ast
 import (
 	"errors"
 	"fmt"
-	"github.com/gobwas/glob/syntax/lexer"
 	"unicode/utf8"
+
+	"github.com/pachyderm/glob/syntax/lexer"
 )
 
 type Lexer interface {
@@ -70,6 +71,15 @@ func parserMain(tree *Node, lex Lexer) (parseFn, *Node, error) {
 
 			return parserMain, p, nil
 
+		case lexer.CaptureOpen:
+			a := NewNode(KindCapture, nil)
+			Insert(tree, a)
+
+			p := NewNode(KindPattern, nil)
+			Insert(a, p)
+
+			return parserMain, p, nil
+
 		case lexer.Separator:
 			p := NewNode(KindPattern, nil)
 			Insert(tree.Parent, p)
@@ -77,6 +87,9 @@ func parserMain(tree *Node, lex Lexer) (parseFn, *Node, error) {
 			return parserMain, p, nil
 
 		case lexer.TermsClose:
+			return parserMain, tree.Parent.Parent, nil
+
+		case lexer.CaptureClose:
 			return parserMain, tree.Parent.Parent, nil
 
 		default:
