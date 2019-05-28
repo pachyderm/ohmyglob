@@ -1,11 +1,12 @@
 package compiler
 
 import (
+	"reflect"
+	"testing"
+
 	"github.com/gobwas/glob/match"
 	"github.com/gobwas/glob/match/debug"
 	"github.com/gobwas/glob/syntax/ast"
-	"reflect"
-	"testing"
 )
 
 var separators = []rune{'.'}
@@ -562,6 +563,24 @@ func TestCompiler(t *testing.T) {
 					match.NewList([]rune{'d', 'e', 'f'}, false),
 					match.NewNothing(),
 				}},
+			),
+		},
+		{
+			ast: ast.NewNode(ast.KindPattern, nil,
+				ast.NewNode(ast.KindRange, ast.Range{Lo: 'a', Hi: 'z'}),
+				ast.NewNode(ast.KindRange, ast.Range{Lo: 'a', Hi: 'x', Not: true}),
+				ast.NewNode(ast.KindAny, nil),
+			),
+			result: match.NewBTree(
+				match.NewRow(
+					2,
+					match.Matchers{
+						match.NewRange('a', 'z', false),
+						match.NewRange('a', 'x', true),
+					}...,
+				),
+				nil,
+				match.NewSuper(),
 			),
 		},
 		{

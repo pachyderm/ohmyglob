@@ -1,7 +1,6 @@
 package lexer
 
 import (
-	"bytes"
 	"fmt"
 	"unicode/utf8"
 
@@ -17,27 +16,14 @@ const (
 	char_range_close   = ']'
 	char_terms_open    = '{'
 	char_terms_close   = '}'
+	char_not           = '!'
+	char_capture_at    = '@'
+	char_capture_plus  = '+'
 	char_capture_open  = '('
+	char_capture_pipe  = '|'
 	char_capture_close = ')'
-	char_range_not     = '!'
 	char_range_between = '-'
 )
-
-var specials = []byte{
-	char_any,
-	char_single,
-	char_escape,
-	char_range_open,
-	char_range_close,
-	char_terms_open,
-	char_terms_close,
-	char_capture_open,
-	char_capture_close,
-}
-
-func Special(c byte) bool {
-	return bytes.IndexByte(specials, c) != -1
-}
 
 type tokens []Token
 
@@ -63,9 +49,9 @@ type lexer struct {
 	pos  int
 	err  error
 
-	tokens     tokens
-	termsLevel int
-	inCapture  bool
+	tokens       tokens
+	termsLevel   int
+	captureLevel int
 
 	lastRune     rune
 	lastRuneSize int
@@ -73,6 +59,7 @@ type lexer struct {
 }
 
 func NewLexer(source string) *lexer {
+	fmt.Println(source)
 	l := &lexer{
 		data:   source,
 		tokens: tokens(make([]Token, 0, 4)),
@@ -152,24 +139,24 @@ func (l *lexer) termsLeave() {
 	l.termsLevel--
 }
 
+func (l *lexer) inCapture() bool {
+	return l.captureLevel > 0
+}
+
 func (l *lexer) captureEnter() {
-	if l.inCapture {
-		l.errorf("unexpected open capture character")
-		return
-	}
-	l.inCapture = true
+	l.captureLevel++
 }
 
 func (l *lexer) captureLeave() {
-	if !l.inCapture {
-		l.errorf("unexpected close capture character")
-		return
-	}
-	l.inCapture = false
+	l.captureLevel--
 }
 
-var inTextBreakers = []rune{char_single, char_any, char_range_open, char_terms_open, char_capture_open}
-var inTermsBreakers = append(inTextBreakers, char_terms_close, char_comma)
+var (
+	inTextBasicBreakers    = []rune{char_single, char_any, char_range_open, char_terms_open, char_capture_open}
+	inTextExtendedBreakers = append(inTextBasicBreakers, char_capture_at, char_not, char_capture_plus)
+	inCaptureBreakers      = append(inTextBasicBreakers, char_capture_close, char_capture_pipe, char_capture_at, char_not, char_capture_plus)
+	inTermsBreakers        = append(inTextBasicBreakers, char_terms_close, char_comma, char_capture_at, char_not, char_capture_plus)
+)
 
 func (l *lexer) fetchItem() {
 	r := l.read()
@@ -188,25 +175,72 @@ func (l *lexer) fetchItem() {
 		l.tokens.push(Token{TermsClose, string(r)})
 		l.termsLeave()
 
+	case r == char_capture_pipe && l.inCapture():
+		l.tokens.push(Token{Separator, string(r)})
+
 	case r == char_range_open:
 		l.tokens.push(Token{RangeOpen, string(r)})
 		l.fetchRange()
 
 	case r == char_capture_open:
-		l.tokens.push(Token{CaptureOpen, string(r)})
+		l.tokens.push(Token{CaptureOpenAt, string(r)})
 		l.captureEnter()
 
-	case r == char_capture_close:
+	case r == char_capture_at:
+		switch s, _ := l.peek(); s {
+		case char_capture_open:
+			l.read()
+			l.tokens.push(Token{CaptureOpenAt, string(r) + string(char_capture_open)})
+			l.captureEnter()
+		default:
+			l.unread()
+			l.fetchText(inTextBasicBreakers)
+		}
+
+	case r == char_not:
+		switch s, _ := l.peek(); s {
+		case char_capture_open:
+			l.read()
+			l.tokens.push(Token{CaptureOpenNot, string(r) + string(char_capture_open)})
+			l.captureEnter()
+		default:
+			l.unread()
+			l.fetchText(inTextBasicBreakers)
+		}
+
+	case r == char_capture_plus:
+		switch s, _ := l.peek(); s {
+		case char_capture_open:
+			l.read()
+			l.tokens.push(Token{CaptureOpenPlus, string(r) + string(char_capture_open)})
+			l.captureEnter()
+		default:
+			l.unread()
+			l.fetchText(inTextBasicBreakers)
+		}
+
+	case r == char_capture_close && l.inCapture():
 		l.tokens.push(Token{CaptureClose, string(r)})
 		l.captureLeave()
 
 	case r == char_single:
-		l.tokens.push(Token{Single, string(r)})
+		switch l.read() {
+		case char_capture_open:
+			l.tokens.push(Token{CaptureOpenQuest, string(r) + string(char_capture_open)})
+			l.captureEnter()
+		default:
+			l.unread()
+			l.tokens.push(Token{Single, string(r)})
+		}
 
 	case r == char_any:
-		if l.read() == char_any {
+		switch l.read() {
+		case char_any:
 			l.tokens.push(Token{Super, string(r) + string(r)})
-		} else {
+		case char_capture_open:
+			l.tokens.push(Token{CaptureOpenAny, string(r) + string(char_capture_open)})
+			l.captureEnter()
+		default:
 			l.unread()
 			l.tokens.push(Token{Any, string(r)})
 		}
@@ -217,8 +251,10 @@ func (l *lexer) fetchItem() {
 		var breakers []rune
 		if l.inTerms() {
 			breakers = inTermsBreakers
+		} else if l.inCapture() {
+			breakers = inCaptureBreakers
 		} else {
-			breakers = inTextBreakers
+			breakers = inTextExtendedBreakers
 		}
 		l.fetchText(breakers)
 	}
@@ -250,7 +286,7 @@ func (l *lexer) fetchRange() {
 			continue
 		}
 
-		if !seenNot && r == char_range_not {
+		if !seenNot && r == char_not {
 			l.tokens.push(Token{Not, string(r)})
 			seenNot = true
 			continue
