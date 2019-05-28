@@ -59,7 +59,6 @@ type lexer struct {
 }
 
 func NewLexer(source string) *lexer {
-	fmt.Println(source)
 	l := &lexer{
 		data:   source,
 		tokens: tokens(make([]Token, 0, 4)),
@@ -154,8 +153,8 @@ func (l *lexer) captureLeave() {
 var (
 	inTextBasicBreakers    = []rune{char_single, char_any, char_range_open, char_terms_open, char_capture_open}
 	inTextExtendedBreakers = append(inTextBasicBreakers, char_capture_at, char_not, char_capture_plus)
-	inCaptureBreakers      = append(inTextBasicBreakers, char_capture_close, char_capture_pipe, char_capture_at, char_not, char_capture_plus)
-	inTermsBreakers        = append(inTextBasicBreakers, char_terms_close, char_comma, char_capture_at, char_not, char_capture_plus)
+	inCaptureBreakers      = append(inTextExtendedBreakers, char_capture_close, char_capture_pipe)
+	inTermsBreakers        = append(append([]rune{}, inTextExtendedBreakers...), char_terms_close, char_comma) // need to copy slice
 )
 
 func (l *lexer) fetchItem() {
