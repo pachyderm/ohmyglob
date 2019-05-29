@@ -182,7 +182,7 @@ func (l *lexer) fetchItem() {
 		l.fetchRange()
 
 	case r == char_capture_open:
-		l.tokens.push(Token{CaptureOpen, string(r)})
+		l.tokens.push(Token{CaptureOpen, string(char_capture_at) + string(r)})
 		l.captureEnter()
 
 	case r == char_capture_at:

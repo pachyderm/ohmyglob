@@ -72,7 +72,7 @@ func parserMain(tree *Node, lex Lexer) (parseFn, *Node, error) {
 			return parserMain, p, nil
 
 		case lexer.CaptureOpen:
-			a := NewNode(KindCapture, Capture{token.Raw[:0]})
+			a := NewNode(KindCapture, Capture{token.Raw[:1]})
 			Insert(tree, a)
 
 			p := NewNode(KindPattern, nil)
@@ -142,6 +142,9 @@ func parserRange(tree *Node, lex Lexer) (parseFn, *Node, error) {
 
 		case lexer.Text:
 			chars = token.Raw
+
+		case lexer.CaptureOpen:
+			chars = token.Raw[:1]
 
 		case lexer.RangeClose:
 			isRange := lo != 0 && hi != 0

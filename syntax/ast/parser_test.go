@@ -155,7 +155,7 @@ func TestParseString(t *testing.T) {
 			//pattern: "/x/([a-z]*)/**"
 			tokens: []lexer.Token{
 				{lexer.Text, "/x/"},
-				{lexer.CaptureOpen, "("},
+				{lexer.CaptureOpen, "@("},
 				{lexer.RangeOpen, "["},
 				{lexer.RangeLo, "a"},
 				{lexer.RangeBetween, "-"},
@@ -168,7 +168,7 @@ func TestParseString(t *testing.T) {
 			},
 			tree: NewNode(KindPattern, nil,
 				NewNode(KindText, Text{Text: "/x/"}),
-				NewNode(KindCapture, nil,
+				NewNode(KindCapture, Capture{Quantifier: "@"},
 					NewNode(KindPattern, nil,
 						NewNode(KindRange, Range{Lo: 'a', Hi: 'z', Not: false}),
 					),

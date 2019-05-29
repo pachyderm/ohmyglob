@@ -44,7 +44,7 @@ func TestLexGood(t *testing.T) {
 			pattern: "/files/(*)/*.jpg",
 			items: []Token{
 				{Text, "/files/"},
-				{CaptureOpen, "("},
+				{CaptureOpen, "@("},
 				{Any, "*"},
 				{CaptureClose, ")"},
 				{Text, "/"},
