@@ -82,6 +82,10 @@ type Text struct {
 	Text string
 }
 
+type Capture struct {
+	Quantifier string
+}
+
 type Kind int
 
 const (

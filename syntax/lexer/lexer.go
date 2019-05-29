@@ -182,14 +182,14 @@ func (l *lexer) fetchItem() {
 		l.fetchRange()
 
 	case r == char_capture_open:
-		l.tokens.push(Token{CaptureOpenAt, string(r)})
+		l.tokens.push(Token{CaptureOpen, string(r)})
 		l.captureEnter()
 
 	case r == char_capture_at:
 		switch s, _ := l.peek(); s {
 		case char_capture_open:
 			l.read()
-			l.tokens.push(Token{CaptureOpenAt, string(r) + string(char_capture_open)})
+			l.tokens.push(Token{CaptureOpen, string(r) + string(char_capture_open)})
 			l.captureEnter()
 		default:
 			l.unread()
@@ -200,7 +200,7 @@ func (l *lexer) fetchItem() {
 		switch s, _ := l.peek(); s {
 		case char_capture_open:
 			l.read()
-			l.tokens.push(Token{CaptureOpenNot, string(r) + string(char_capture_open)})
+			l.tokens.push(Token{CaptureOpen, string(r) + string(char_capture_open)})
 			l.captureEnter()
 		default:
 			l.unread()
@@ -211,7 +211,7 @@ func (l *lexer) fetchItem() {
 		switch s, _ := l.peek(); s {
 		case char_capture_open:
 			l.read()
-			l.tokens.push(Token{CaptureOpenPlus, string(r) + string(char_capture_open)})
+			l.tokens.push(Token{CaptureOpen, string(r) + string(char_capture_open)})
 			l.captureEnter()
 		default:
 			l.unread()
@@ -225,7 +225,7 @@ func (l *lexer) fetchItem() {
 	case r == char_single:
 		switch l.read() {
 		case char_capture_open:
-			l.tokens.push(Token{CaptureOpenQuest, string(r) + string(char_capture_open)})
+			l.tokens.push(Token{CaptureOpen, string(r) + string(char_capture_open)})
 			l.captureEnter()
 		default:
 			l.unread()
@@ -237,7 +237,7 @@ func (l *lexer) fetchItem() {
 		case char_any:
 			l.tokens.push(Token{Super, string(r) + string(r)})
 		case char_capture_open:
-			l.tokens.push(Token{CaptureOpenAny, string(r) + string(char_capture_open)})
+			l.tokens.push(Token{CaptureOpen, string(r) + string(char_capture_open)})
 			l.captureEnter()
 		default:
 			l.unread()
