@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"unicode/utf8"
 
-	"github.com/pachyderm/glob/util/runes"
+	"github.com/gobwas/glob/util/runes"
 )
 
 const (
