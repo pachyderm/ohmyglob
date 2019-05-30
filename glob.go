@@ -1,13 +1,15 @@
 package glob
 
 import (
-	"github.com/gobwas/glob/compiler"
-	"github.com/gobwas/glob/syntax"
+	"regexp"
+
+	"github.com/pachyderm/glob/compiler"
+	"github.com/pachyderm/glob/syntax"
 )
 
 // Glob represents compiled glob pattern.
 type Glob interface {
-	Match(string) bool
+	Match([]byte) bool
 }
 
 // Compile creates Glob for given pattern and strings (if any present after pattern) as separators.
@@ -42,12 +44,14 @@ func Compile(pattern string, separators ...rune) (Glob, error) {
 		return nil, err
 	}
 
-	matcher, err := compiler.Compile(ast, separators)
+	regex, err := compiler.Compile(ast, separators)
 	if err != nil {
 		return nil, err
 	}
 
-	return matcher, nil
+	r := regexp.MustCompile(regex)
+
+	return r, nil
 }
 
 // MustCompile is the same as Compile, except that if Compile returns error, this will panic

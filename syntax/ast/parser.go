@@ -44,7 +44,7 @@ func parserMain(tree *Node, lex Lexer) (parseFn, *Node, error) {
 			return nil, tree, errors.New(token.Raw)
 
 		case lexer.Text:
-			Insert(tree, NewNode(KindText, Text{token.Raw}))
+			Insert(tree, NewNode(KindText, Text{Text: token.Raw}))
 			return parserMain, tree, nil
 
 		case lexer.Any:

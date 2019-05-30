@@ -16,7 +16,8 @@ const (
 	char_range_close   = ']'
 	char_terms_open    = '{'
 	char_terms_close   = '}'
-	char_not           = '!'
+	char_not_exclaim   = '!'
+	char_not_caret     = '^'
 	char_capture_at    = '@'
 	char_capture_plus  = '+'
 	char_capture_open  = '('
@@ -152,7 +153,7 @@ func (l *lexer) captureLeave() {
 
 var (
 	inTextBasicBreakers    = []rune{char_single, char_any, char_range_open, char_terms_open, char_capture_open}
-	inTextExtendedBreakers = append(inTextBasicBreakers, char_capture_at, char_not, char_capture_plus)
+	inTextExtendedBreakers = append(inTextBasicBreakers, char_capture_at, char_not_exclaim, char_not_caret, char_capture_plus)
 	inCaptureBreakers      = append(inTextExtendedBreakers, char_capture_close, char_capture_pipe)
 	inTermsBreakers        = append(append([]rune{}, inTextExtendedBreakers...), char_terms_close, char_comma) // need to copy slice
 )
@@ -196,7 +197,9 @@ func (l *lexer) fetchItem() {
 			l.fetchText(inTextBasicBreakers)
 		}
 
-	case r == char_not:
+	case r == char_not_exclaim:
+		fallthrough
+	case r == char_not_caret:
 		switch s, _ := l.peek(); s {
 		case char_capture_open:
 			l.read()
@@ -235,7 +238,13 @@ func (l *lexer) fetchItem() {
 	case r == char_any:
 		switch l.read() {
 		case char_any:
-			l.tokens.push(Token{Super, string(r) + string(r)})
+			switch s, _ := l.peek(); s {
+			case char_capture_open:
+				l.unread()
+				l.tokens.push(Token{Any, string(r)})
+			default:
+				l.tokens.push(Token{Super, string(r) + string(r)})
+			}
 		case char_capture_open:
 			l.tokens.push(Token{CaptureOpen, string(r) + string(char_capture_open)})
 			l.captureEnter()
@@ -285,7 +294,7 @@ func (l *lexer) fetchRange() {
 			continue
 		}
 
-		if !seenNot && r == char_not {
+		if !seenNot && (r == char_not_exclaim || r == char_not_caret) {
 			l.tokens.push(Token{Not, string(r)})
 			seenNot = true
 			continue

@@ -249,6 +249,30 @@ func TestLexGood(t *testing.T) {
 			},
 		},
 		{
+			pattern: "+(a|b\\[)*",
+			items: []Token{
+				{CaptureOpen, "+("},
+				{Text, "a"},
+				{Separator, "|"},
+				{Text, "b["},
+				{CaptureClose, ")"},
+				{Any, "*"},
+				{EOF, ""},
+			},
+		}, {
+			pattern: "ab**(e|f)",
+			items: []Token{
+				{Text, "ab"},
+				{Any, "*"},
+				{CaptureOpen, "*("},
+				{Text, "e"},
+				{Separator, "|"},
+				{Text, "f"},
+				{CaptureClose, ")"},
+				{EOF, ""},
+			},
+		},
+		{
 			pattern: "/{z,ab,!([a-z]*|?)}*",
 			items: []Token{
 				{Text, "/"},
