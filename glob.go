@@ -66,3 +66,22 @@ func MustCompile(pattern string, separators ...rune) *Glob {
 func (g *Glob) Match(fixture string) bool {
 	return g.r.MatchString(fixture)
 }
+
+// QuoteMeta returns a string that quotes all glob pattern meta characters
+// inside the argument text; For example, QuoteMeta(`*(foo*)`) returns `\*\(foo\*\)`.
+func QuoteMeta(s string) string {
+	b := make([]byte, 2*len(s))
+
+	// a byte loop is correct because all meta characters are ASCII
+	j := 0
+	for i := 0; i < len(s); i++ {
+		if syntax.Special(s[i]) {
+			b[j] = '\\'
+			j++
+		}
+		b[j] = s[i]
+		j++
+	}
+
+	return string(b[0:j])
+}

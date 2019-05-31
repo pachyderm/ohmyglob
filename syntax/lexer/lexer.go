@@ -1,6 +1,7 @@
 package lexer
 
 import (
+	"bytes"
 	"fmt"
 	"unicode/utf8"
 
@@ -25,6 +26,33 @@ const (
 	char_capture_close = ')'
 	char_range_between = '-'
 )
+
+var (
+	specials = []byte{
+		char_any,
+		char_single,
+		char_escape,
+		char_range_open,
+		char_range_close,
+		char_terms_open,
+		char_terms_close,
+		char_capture_open,
+		char_capture_close,
+		char_capture_at,
+		char_capture_plus,
+		char_not_caret,
+		char_not_exclaim,
+	}
+
+	inTextBasicBreakers    = []rune{char_single, char_any, char_range_open, char_terms_open, char_capture_open}
+	inTextExtendedBreakers = append(inTextBasicBreakers, char_capture_at, char_not_exclaim, char_not_caret, char_capture_plus)
+	inCaptureBreakers      = append(inTextExtendedBreakers, char_capture_close, char_capture_pipe)
+	inTermsBreakers        = append(append([]rune{}, inTextExtendedBreakers...), char_terms_close, char_comma) // need to copy slice
+)
+
+func Special(c byte) bool {
+	return bytes.IndexByte(specials, c) != -1
+}
 
 type tokens []Token
 
@@ -150,13 +178,6 @@ func (l *lexer) captureEnter() {
 func (l *lexer) captureLeave() {
 	l.captureLevel--
 }
-
-var (
-	inTextBasicBreakers    = []rune{char_single, char_any, char_range_open, char_terms_open, char_capture_open}
-	inTextExtendedBreakers = append(inTextBasicBreakers, char_capture_at, char_not_exclaim, char_not_caret, char_capture_plus)
-	inCaptureBreakers      = append(inTextExtendedBreakers, char_capture_close, char_capture_pipe)
-	inTermsBreakers        = append(append([]rune{}, inTextExtendedBreakers...), char_terms_close, char_comma) // need to copy slice
-)
 
 func (l *lexer) fetchItem() {
 	r := l.read()

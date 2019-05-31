@@ -179,36 +179,36 @@ func TestGlob(t *testing.T) {
 	}
 }
 
-// func TestQuoteMeta(t *testing.T) {
-// 	for id, test := range []struct {
-// 		in, out string
-// 	}{
-// 		{
-// 			in:  `[foo*]`,
-// 			out: `\[foo\*\]`,
-// 		},
-// 		{
-// 			in:  `{foo*}`,
-// 			out: `\{foo\*\}`,
-// 		},
-// 		{
-// 			in:  `*?\[]{}`,
-// 			out: `\*\?\\\[\]\{\}`,
-// 		},
-// 		{
-// 			in:  `some text and *?\[]{}`,
-// 			out: `some text and \*\?\\\[\]\{\}`,
-// 		},
-// 	} {
-// 		act := QuoteMeta(test.in)
-// 		if act != test.out {
-// 			t.Errorf("#%d QuoteMeta(%q) = %q; want %q", id, test.in, act, test.out)
-// 		}
-// 		if _, err := Compile(act); err != nil {
-// 			t.Errorf("#%d _, err := Compile(QuoteMeta(%q) = %q); err = %q", id, test.in, act, err)
-// 		}
-// 	}
-// }
+func TestQuoteMeta(t *testing.T) {
+	for id, test := range []struct {
+		in, out string
+	}{
+		{
+			in:  `[foo*]`,
+			out: `\[foo\*\]`,
+		},
+		{
+			in:  `{foo*}`,
+			out: `\{foo\*\}`,
+		},
+		{
+			in:  `*?\[]{}`,
+			out: `\*\?\\\[\]\{\}`,
+		},
+		{
+			in:  `some text and *?\[]{}`,
+			out: `some text and \*\?\\\[\]\{\}`,
+		},
+	} {
+		act := QuoteMeta(test.in)
+		if act != test.out {
+			t.Errorf("#%d QuoteMeta(%q) = %q; want %q", id, test.in, act, test.out)
+		}
+		if _, err := Compile(act); err != nil {
+			t.Errorf("#%d _, err := Compile(QuoteMeta(%q) = %q); err = %q", id, test.in, act, err)
+		}
+	}
+}
 
 func BenchmarkParseGlob(b *testing.B) {
 	for i := 0; i < b.N; i++ {

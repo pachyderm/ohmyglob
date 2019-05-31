@@ -126,7 +126,7 @@ func parserRange(tree *Node, lex Lexer) (parseFn, *Node, error) {
 			lo = r
 
 		case lexer.RangeBetween:
-			//
+			// do nothing
 
 		case lexer.RangeHi:
 			r, w := utf8.DecodeRuneInString(token.Raw)
