@@ -263,7 +263,7 @@ func TestExtGlob(t *testing.T) {
 			if result != test.should {
 				t.Errorf(
 					"pattern %q matching %q should be %v but got %v\n%s",
-					test.pattern, test.match, test.should, result, g,
+					test.pattern, test.match, test.should, result, g.r,
 				)
 			}
 		})

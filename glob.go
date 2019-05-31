@@ -8,8 +8,8 @@ import (
 )
 
 // Glob represents compiled glob pattern.
-type Glob interface {
-	Match([]byte) bool
+type Glob struct {
+	r *regexp.Regexp
 }
 
 // Compile creates Glob for given pattern and strings (if any present after pattern) as separators.
@@ -38,7 +38,7 @@ type Glob interface {
 //        pattern { `,` pattern }
 //                    comma-separated (without spaces) patterns
 //
-func Compile(pattern string, separators ...rune) (Glob, error) {
+func Compile(pattern string, separators ...rune) (*Glob, error) {
 	ast, err := syntax.Parse(pattern)
 	if err != nil {
 		return nil, err
@@ -51,15 +51,18 @@ func Compile(pattern string, separators ...rune) (Glob, error) {
 
 	r := regexp.MustCompile(regex)
 
-	return r, nil
+	return &Glob{r}, nil
 }
 
 // MustCompile is the same as Compile, except that if Compile returns error, this will panic
-func MustCompile(pattern string, separators ...rune) Glob {
+func MustCompile(pattern string, separators ...rune) *Glob {
 	g, err := Compile(pattern, separators...)
 	if err != nil {
 		panic(err)
 	}
-
 	return g
+}
+
+func (g *Glob) Match(fixture string) bool {
+	return g.r.MatchString(fixture)
 }
