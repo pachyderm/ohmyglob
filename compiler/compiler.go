@@ -56,16 +56,16 @@ func compile(tree *ast.Node, sep []rune) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		captureRegex = "(" + captureRegex + ")"
+		captureRegex = "((?:" + captureRegex + ")"
 		switch c.Quantifier {
 		case "*":
-			return captureRegex + "*", nil
+			return captureRegex + "*)", nil
 		case "?":
-			return captureRegex + "?", nil
+			return captureRegex + "?)", nil
 		case "+":
-			return captureRegex + "+", nil
+			return captureRegex + "+)", nil
 		case "@":
-			return captureRegex, nil
+			return captureRegex + ")", nil
 		case "!":
 			// not implemented -- would require a non-regular expression
 			// a future implementation might switch to using PCRE in place of Go regexp here

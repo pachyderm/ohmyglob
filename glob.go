@@ -67,6 +67,10 @@ func (g *Glob) Match(fixture string) bool {
 	return g.r.MatchString(fixture)
 }
 
+func (g *Glob) Capture(fixture string) []string {
+	return g.r.FindStringSubmatch(fixture)
+}
+
 // QuoteMeta returns a string that quotes all glob pattern meta characters
 // inside the argument text; For example, QuoteMeta(`*(foo*)`) returns `\*\(foo\*\)`.
 func QuoteMeta(s string) string {
