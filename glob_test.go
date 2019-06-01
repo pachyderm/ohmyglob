@@ -51,9 +51,10 @@ const (
 )
 
 type test struct {
-	pattern, match string
-	should         bool
-	delimiters     []rune
+	pattern    string
+	match      string
+	should     bool
+	delimiters []rune
 }
 
 func glob(s bool, p, m string, d ...rune) test {
@@ -116,6 +117,8 @@ func TestGlob(t *testing.T) {
 		glob(true, "{*,**}{a,b}", "ab"),
 		glob(false, "{*,**}{a,b}", "ac"),
 
+		glob(true, "[a-z]", "c"),
+		glob(false, "[a-z]", "C"),
 		glob(true, "/{rate,[a-z][a-z][a-z]}*", "/rate"),
 		glob(true, "/{rate,[0-9][0-9][0-9]}*", "/rate"),
 		glob(true, "/{rate,[a-z][a-z][a-z]}*", "/usd"),
@@ -169,7 +172,7 @@ func TestGlob(t *testing.T) {
 			if result != test.should {
 				t.Errorf(
 					"pattern %q matching %q should be %v but got %v\n%s",
-					test.pattern, test.match, test.should, result, g,
+					test.pattern, test.match, test.should, result, g.r,
 				)
 			}
 		})
@@ -243,6 +246,7 @@ func BenchmarkAllRegexpMatch(b *testing.B) {
 		_ = m.Match(f)
 	}
 }
+
 func BenchmarkAllGlobMismatch(b *testing.B) {
 	m, _ := Compile(pattern_all)
 
@@ -330,20 +334,6 @@ func BenchmarkAlternativesRegexpMismatch(b *testing.B) {
 	}
 }
 
-func BenchmarkAlternativesSuffixFirstGlobMatch(b *testing.B) {
-	m, _ := Compile(pattern_alternatives_suffix)
-
-	for i := 0; i < b.N; i++ {
-		_ = m.Match(fixture_alternatives_suffix_first_match)
-	}
-}
-func BenchmarkAlternativesSuffixFirstGlobMismatch(b *testing.B) {
-	m, _ := Compile(pattern_alternatives_suffix)
-
-	for i := 0; i < b.N; i++ {
-		_ = m.Match(fixture_alternatives_suffix_first_mismatch)
-	}
-}
 func BenchmarkAlternativesSuffixSecondGlobMatch(b *testing.B) {
 	m, _ := Compile(pattern_alternatives_suffix)
 

@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/gobwas/glob/syntax/lexer"
+	"github.com/pachyderm/glob/syntax/lexer"
 )
 
 type stubLexer struct {
@@ -149,6 +149,32 @@ func TestParseString(t *testing.T) {
 					),
 				),
 				NewNode(KindAny, nil),
+			),
+		},
+		{
+			//pattern: "/x/([a-z]*)/**"
+			tokens: []lexer.Token{
+				{lexer.Text, "/x/"},
+				{lexer.CaptureOpen, "@("},
+				{lexer.RangeOpen, "["},
+				{lexer.RangeLo, "a"},
+				{lexer.RangeBetween, "-"},
+				{lexer.RangeHi, "z"},
+				{lexer.RangeClose, "]"},
+				{lexer.CaptureClose, ")"},
+				{lexer.Text, "/"},
+				{lexer.Super, "**"},
+				{lexer.EOF, ""},
+			},
+			tree: NewNode(KindPattern, nil,
+				NewNode(KindText, Text{Text: "/x/"}),
+				NewNode(KindCapture, Capture{Quantifier: "@"},
+					NewNode(KindPattern, nil,
+						NewNode(KindRange, Range{Lo: 'a', Hi: 'z', Not: false}),
+					),
+				),
+				NewNode(KindText, Text{Text: "/"}),
+				NewNode(KindSuper, nil),
 			),
 		},
 		{

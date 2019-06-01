@@ -5,6 +5,39 @@ import (
 	"fmt"
 )
 
+type List struct {
+	Not   bool
+	Chars string
+}
+
+type Range struct {
+	Not    bool
+	Lo, Hi rune
+}
+
+type Text struct {
+	Text string
+}
+
+type Capture struct {
+	Quantifier string
+}
+
+type Kind int
+
+const (
+	KindNothing Kind = iota
+	KindPattern
+	KindList
+	KindRange
+	KindCapture
+	KindText
+	KindAny
+	KindSuper
+	KindSingle
+	KindAnyOf
+)
+
 type Node struct {
 	Parent   *Node
 	Children []*Node
@@ -23,22 +56,11 @@ func NewNode(k Kind, v interface{}, ch ...*Node) *Node {
 	return n
 }
 
-func (a *Node) Equal(b *Node) bool {
-	if a.Kind != b.Kind {
-		return false
+func Insert(parent *Node, children ...*Node) {
+	parent.Children = append(parent.Children, children...)
+	for _, ch := range children {
+		ch.Parent = parent
 	}
-	if a.Value != b.Value {
-		return false
-	}
-	if len(a.Children) != len(b.Children) {
-		return false
-	}
-	for i, c := range a.Children {
-		if !c.Equal(b.Children[i]) {
-			return false
-		}
-	}
-	return true
 }
 
 func (a *Node) String() string {
@@ -61,41 +83,6 @@ func (a *Node) String() string {
 	return buf.String()
 }
 
-func Insert(parent *Node, children ...*Node) {
-	parent.Children = append(parent.Children, children...)
-	for _, ch := range children {
-		ch.Parent = parent
-	}
-}
-
-type List struct {
-	Not   bool
-	Chars string
-}
-
-type Range struct {
-	Not    bool
-	Lo, Hi rune
-}
-
-type Text struct {
-	Text string
-}
-
-type Kind int
-
-const (
-	KindNothing Kind = iota
-	KindPattern
-	KindList
-	KindRange
-	KindText
-	KindAny
-	KindSuper
-	KindSingle
-	KindAnyOf
-)
-
 func (k Kind) String() string {
 	switch k {
 	case KindNothing:
@@ -106,6 +93,8 @@ func (k Kind) String() string {
 		return "List"
 	case KindRange:
 		return "Range"
+	case KindCapture:
+		return "Capture"
 	case KindText:
 		return "Text"
 	case KindAny:
