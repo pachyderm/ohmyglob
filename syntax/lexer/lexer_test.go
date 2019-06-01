@@ -194,6 +194,34 @@ func TestLexGood(t *testing.T) {
 			},
 		},
 		{
+			pattern: "[[:alpha:]]",
+			items: []Token{
+				{RangeOpen, "["},
+				{Text, ":alpha:"},
+				{RangeClose, "]"},
+				{EOF, ""},
+			},
+		},
+		{
+			pattern: "[![:alpha:]]",
+			items: []Token{
+				{RangeOpen, "["},
+				{Not, "!"},
+				{Text, ":alpha:"},
+				{RangeClose, "]"},
+				{EOF, ""},
+			},
+		},
+		{
+			pattern: "[[:^alpha:]]",
+			items: []Token{
+				{RangeOpen, "["},
+				{Text, ":^alpha:"},
+				{RangeClose, "]"},
+				{EOF, ""},
+			},
+		},
+		{
 			pattern: "[!日-語]",
 			items: []Token{
 				{RangeOpen, "["},

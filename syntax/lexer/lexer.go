@@ -293,6 +293,7 @@ func (l *lexer) fetchRange() {
 	var wantHi bool
 	var wantClose bool
 	var seenNot bool
+	var isPOSIX bool
 	for {
 		r := l.read()
 		if r == eof {
@@ -300,11 +301,25 @@ func (l *lexer) fetchRange() {
 			return
 		}
 
+		if r == char_range_open {
+			if n, _ := l.peek(); n == ':' || n == '^' || n == '!' {
+				isPOSIX = true
+				l.read()
+			}
+		}
+
 		if wantClose {
 			if r != char_range_close {
 				l.errorf("expected close range character")
 			} else {
 				l.tokens.push(Token{RangeClose, string(r)})
+			}
+			if isPOSIX {
+				// read the second bracket
+				r = l.read()
+				if r != char_range_close {
+					l.errorf("expected close range character")
+				}
 			}
 			return
 		}
@@ -333,6 +348,7 @@ func (l *lexer) fetchRange() {
 		l.fetchText([]rune{char_range_close})
 		wantClose = true
 	}
+
 }
 
 func (l *lexer) fetchText(breakers []rune) {
