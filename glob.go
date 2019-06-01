@@ -38,6 +38,17 @@ type Glob struct {
 //        pattern { `,` pattern }
 //                    comma-separated (without spaces) patterns
 //
+//    extended-glob:
+//        `(` { `|` pattern } `)`
+//        `@(` { `|` pattern } `)`
+//                    capture one of pipe-separated subpatterns
+//        `*(` { `|` pattern } `)`
+//                    capture any number of of pipe-separated subpatterns
+//        `+(` { `|` pattern } `)`
+//                    capture one or more of of pipe-separated subpatterns
+//        `?(` { `|` pattern } `)`
+//                    capture zero or one of of pipe-separated subpatterns
+//
 func Compile(pattern string, separators ...rune) (*Glob, error) {
 	ast, err := syntax.Parse(pattern)
 	if err != nil {
@@ -49,7 +60,10 @@ func Compile(pattern string, separators ...rune) (*Glob, error) {
 		return nil, err
 	}
 
-	r := regexp.MustCompile(regex)
+	r, err := regexp.Compile(regex)
+	if err != nil {
+		return nil, err
+	}
 
 	return &Glob{r}, nil
 }

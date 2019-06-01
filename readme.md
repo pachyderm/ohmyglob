@@ -4,7 +4,9 @@ This library allows you to use capture groups in globs,
 by using the extended globbing functions (except for the `!` quantifier, which requires a non-regular expression).
 
 This is implemented by compiling the glob patterns to regex,
-and then doing the matching and capturing with the Go regexp library
+and then doing the matching and capturing with the Go regexp library.
+
+The parser, lexer, and general structure for this library are derived from the excellent https://github.com/gobwas/glob library.
 
 ## Install
 
