@@ -104,6 +104,15 @@ func compile(tree *ast.Node, sep []rune) (string, error) {
 		}
 		regex = fmt.Sprintf("[%v%v]", sign, meta(string(l.Chars)))
 
+	// POSIX classes like `[[:alpha:]]` are handled the same way by regexp
+	case ast.KindPOSIX:
+		p := tree.Value.(ast.POSIX)
+		sign := ""
+		if p.Not {
+			sign = "^"
+		}
+		regex = fmt.Sprintf("[%v[:%v:]]", sign, meta(string(p.Class)))
+
 	// stuff in a range e.g. `[a-d]` is handled the same way by regexp
 	case ast.KindRange:
 		r := tree.Value.(ast.Range)

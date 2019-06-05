@@ -3,6 +3,7 @@ package ast
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"unicode/utf8"
 
 	"github.com/pachyderm/glob/syntax/lexer"
@@ -143,18 +144,24 @@ func parserRange(tree *Node, lex Lexer) (parseFn, *Node, error) {
 		case lexer.Text:
 			chars = token.Raw
 
-		case lexer.CaptureOpen:
-			chars = token.Raw[:1]
-
 		case lexer.RangeClose:
 			isRange := lo != 0 && hi != 0
 			isChars := chars != ""
+			isPOSIX := false
+			if len(chars) >= 2 && chars[:1] == ":" && chars[len(chars)-1:] == ":" {
+				isPOSIX = true
+			}
 
 			if isChars == isRange {
 				return nil, tree, fmt.Errorf("could not parse range")
 			}
 
-			if isRange {
+			if isPOSIX {
+				Insert(tree, NewNode(KindPOSIX, POSIX{
+					Not:   strings.ContainsAny(chars, "^!") || not,
+					Class: strings.Trim(chars, "[:]^!"),
+				}))
+			} else if isRange {
 				Insert(tree, NewNode(KindRange, Range{
 					Lo:  lo,
 					Hi:  hi,

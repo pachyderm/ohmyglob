@@ -119,6 +119,11 @@ func TestGlob(t *testing.T) {
 
 		glob(true, "[a-z]", "c"),
 		glob(false, "[a-z]", "C"),
+		glob(true, "[[:alpha:]]", "C"),
+		glob(false, "[[:alpha:]]", "5"),
+		glob(true, "[[:^alpha:]]", "."),
+		glob(true, "[^[:alpha:]]", "."),
+		glob(true, "[[:space:]]", "\t"),
 		glob(true, "/{rate,[a-z][a-z][a-z]}*", "/rate"),
 		glob(true, "/{rate,[0-9][0-9][0-9]}*", "/rate"),
 		glob(true, "/{rate,[a-z][a-z][a-z]}*", "/usd"),
@@ -331,6 +336,21 @@ func BenchmarkAlternativesRegexpMismatch(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		_ = m.Match(f)
+	}
+}
+
+func BenchmarkAlternativesSuffixFirstGlobMatch(b *testing.B) {
+	m, _ := Compile(pattern_alternatives_suffix)
+
+	for i := 0; i < b.N; i++ {
+		_ = m.Match(fixture_alternatives_suffix_first_match)
+	}
+}
+func BenchmarkAlternativesSuffixFirstGlobMismatch(b *testing.B) {
+	m, _ := Compile(pattern_alternatives_suffix)
+
+	for i := 0; i < b.N; i++ {
+		_ = m.Match(fixture_alternatives_suffix_first_mismatch)
 	}
 }
 

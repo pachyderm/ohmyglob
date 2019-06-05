@@ -10,6 +10,11 @@ type List struct {
 	Chars string
 }
 
+type POSIX struct {
+	Not   bool
+	Class string
+}
+
 type Range struct {
 	Not    bool
 	Lo, Hi rune
@@ -29,6 +34,7 @@ const (
 	KindNothing Kind = iota
 	KindPattern
 	KindList
+	KindPOSIX
 	KindRange
 	KindCapture
 	KindText
@@ -91,6 +97,8 @@ func (k Kind) String() string {
 		return "Pattern"
 	case KindList:
 		return "List"
+	case KindPOSIX:
+		return "POSIX"
 	case KindRange:
 		return "Range"
 	case KindCapture:
