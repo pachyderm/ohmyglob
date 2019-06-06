@@ -275,11 +275,13 @@ func TestNegationGlob(t *testing.T) {
 		// test that the dummy strings work
 		glob(true, "\\\\$..!(!())", "\\$.."),
 
-		// glob(false, "!(*.js|*.json)", "a.js"),
-		// glob(true, "!(*.js|*.json)", "a.js.gz"),
-		// glob(true, "!(*.js|*.json)", "a.json.gz"),
-		// glob(true, "!(*.js|*.json)", "a.gz"),
-		// glob(false, "!(*.js|*.json)", "a.js"),
+		// since the method used here is based on micromatch/extglob,
+		// i've included a fix for https://github.com/micromatch/extglob/issues/10
+		glob(false, "!(*.js|*.json)", "a.js"),
+		glob(true, "!(*.js|*.json)", "a.js.gz"),
+		glob(true, "!(*.js|*.json)", "a.json.gz"),
+		glob(true, "!(*.js|*.json)", "a.gz"),
+		glob(false, "!(*.js|*.json)", "a.js"),
 
 		glob(true, "a*!(x)", "a"),
 		glob(true, "a*!(x)", "ab"),
@@ -412,9 +414,10 @@ func TestNegationGlob(t *testing.T) {
 		glob(false, "!(*[a-b].[a-b]*)", "a.a.a"),
 		glob(false, "!*.(a|b)", "a.a.a"),
 		glob(false, "!*.(a|b)*", "a.a.a"),
-		glob(false, "!(*.a|*.b|*.c)", "a.abcd"),
+		glob(true, "!(*.a|*.b|*.c)", "a.abcd"), // micromatch/extglob disagrees
+		glob(true, "!(*.a|*.b|*.c)", "c.cbad"), // but interestingly, agrees here
 		glob(false, "!(*.a|*.b|*.c)*", "a.abcd"),
-		glob(false, "*.!(a|b|c)", "a.abcd"),
+		glob(true, "*.!(a|b|c)", "a.abcd"), // micromatch/extglob disagrees
 		glob(false, "*.!(a|b|c)*", "a.abcd"),
 		glob(false, "!(*.*)", "a.b"),
 		glob(false, "!(*.[a-b]*)", "a.b"),

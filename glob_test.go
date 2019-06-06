@@ -61,7 +61,7 @@ func glob(s bool, p, m string, d ...rune) test {
 	return test{p, m, s, d}
 }
 
-func TestGlobO(t *testing.T) {
+func TestGlob(t *testing.T) {
 	for _, test := range []test{
 		glob(true, "* ?at * eyes", "my cat has very bright eyes"),
 
