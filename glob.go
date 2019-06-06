@@ -1,15 +1,20 @@
 package glob
 
 import (
+	"fmt"
 	"regexp"
+
+	"github.com/glenn-brown/golang-pkg-pcre/src/pkg/pcre"
 
 	"github.com/pachyderm/glob/compiler"
 	"github.com/pachyderm/glob/syntax"
+	"github.com/pachyderm/glob/syntax/ast"
 )
 
 // Glob represents compiled glob pattern.
 type Glob struct {
 	r *regexp.Regexp
+	p *pcre.Regexp
 }
 
 // Compile creates Glob for given pattern and strings (if any present after pattern) as separators.
@@ -50,22 +55,34 @@ type Glob struct {
 //                    capture zero or one of of pipe-separated subpatterns
 //
 func Compile(pattern string, separators ...rune) (*Glob, error) {
-	ast, err := syntax.Parse(pattern)
+	tree, compilerToUse, err := syntax.Parse(pattern)
 	if err != nil {
 		return nil, err
 	}
 
-	regex, err := compiler.Compile(ast, separators)
+	regex, err := compiler.Compile(tree, separators)
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("pattern:", pattern)
+	fmt.Println("regexp:", regex, compilerToUse)
 
-	r, err := regexp.Compile(regex)
-	if err != nil {
-		return nil, err
+	switch compilerToUse {
+	case ast.Regexp:
+		r, err := regexp.Compile(regex)
+		if err != nil {
+			return nil, err
+		}
+		return &Glob{r: r}, nil
+	case ast.PCRE:
+		p, pcreErr := pcre.Compile(regex, 0)
+		if pcreErr != nil {
+			return nil, fmt.Errorf(pcreErr.String())
+		}
+		return &Glob{p: &p}, nil
+	default:
+		return nil, fmt.Errorf("Unrecognized compiler: %v", compilerToUse)
 	}
-
-	return &Glob{r}, nil
 }
 
 // MustCompile is the same as Compile, except that if Compile returns error, this will panic
@@ -78,11 +95,26 @@ func MustCompile(pattern string, separators ...rune) *Glob {
 }
 
 func (g *Glob) Match(fixture string) bool {
-	return g.r.MatchString(fixture)
+	if g.r != nil {
+		return g.r.MatchString(fixture)
+	}
+	m := g.p.MatcherString(fixture, 0)
+	return m.MatchString(fixture, 0)
 }
 
 func (g *Glob) Capture(fixture string) []string {
-	return g.r.FindStringSubmatch(fixture)
+	if g.r != nil {
+		return g.r.FindStringSubmatch(fixture)
+	}
+	m := g.p.MatcherString(fixture, 0)
+	num := m.Groups()
+	groups := make([]string, 0, num)
+	if m.MatchString(fixture, 0) {
+		for i := 0; i <= num; i++ {
+			groups = append(groups, m.GroupString(i))
+		}
+	}
+	return groups
 }
 
 // QuoteMeta returns a string that quotes all glob pattern meta characters

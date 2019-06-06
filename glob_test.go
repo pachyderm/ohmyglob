@@ -61,7 +61,7 @@ func glob(s bool, p, m string, d ...rune) test {
 	return test{p, m, s, d}
 }
 
-func TestGlob(t *testing.T) {
+func TestGlobO(t *testing.T) {
 	for _, test := range []test{
 		glob(true, "* ?at * eyes", "my cat has very bright eyes"),
 
@@ -141,6 +141,10 @@ func TestGlob(t *testing.T) {
 		glob(true, "*//{,*.}example.com", "https://www.example.com"),
 		glob(true, "*//{,*.}example.com", "http://example.com"),
 		glob(false, "*//{,*.}example.com", "http://example.com.net"),
+
+		glob(true, "*/*/*", "foo/bb/aa/rr"),
+		glob(false, "*/*/*", "foo/bb/aa/rr", '/'),
+		glob(true, "**/**/**", "foo/bb/aa/rr", '/'),
 
 		glob(true, pattern_all, fixture_all_match),
 		glob(false, pattern_all, fixture_all_mismatch),

@@ -8,6 +8,20 @@ import (
 	"github.com/pachyderm/glob/syntax/ast"
 )
 
+// these dummy strings are not valid UTF-8, so we can use them without worrying about them also matching legitmate input
+const (
+	closeNegDummy = string(0xffff)
+	boundaryDummy = string(0xfffe)
+)
+
+func dot(sep []rune) string {
+	meta := regexp.QuoteMeta
+	if len(sep) == 0 {
+		return "."
+	}
+	return fmt.Sprintf("[^%v]", meta(string(sep)))
+}
+
 func compileChildren(tree *ast.Node, sep []rune, concatWith string) (string, error) {
 	childRegex := make([]string, 0)
 	for _, desc := range tree.Children {
@@ -45,6 +59,9 @@ func compile(tree *ast.Node, sep []rune) (string, error) {
 		if err != nil {
 			return "", err
 		}
+		// only the last negative of a subexpression should have the closeNegDummy
+		notNum := strings.Count(regex, closeNegDummy)
+		regex = strings.Replace(regex, closeNegDummy, "", notNum-1)
 
 	// capture groups become capture groups, with the stuff in them OR'd together
 	case ast.KindCapture:
@@ -56,41 +73,37 @@ func compile(tree *ast.Node, sep []rune) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		captureRegex = "((?:" + captureRegex + ")"
 		switch c.Quantifier {
 		case "*":
-			return captureRegex + "*)", nil
+			return "((?:" + captureRegex + ")*)", nil
 		case "?":
-			return captureRegex + "?)", nil
+			return "((?:" + captureRegex + ")?)", nil
 		case "+":
-			return captureRegex + "+)", nil
+			return "((?:" + captureRegex + ")+)", nil
 		case "@":
-			return captureRegex + ")", nil
+			return "(" + captureRegex + ")", nil
 		case "!":
-			// not implemented -- would require a non-regular expression
-			// a future implementation might switch to using PCRE in place of Go regexp here
+			// not only does a negation capture require PCRE
+			// it also requires a complicated function to determine how aggressively it should match
+			// this requires global information, so we cannot do it here, instead we insert a `closeNegDummy`
+			// to mark the spot where we might potentially need this
+			return "((?:(?!(?:" + captureRegex + fmt.Sprintf("%v))%v*))", closeNegDummy, dot(sep)), nil
 		}
 
 		return "", fmt.Errorf("unimplemented quatifier %v", c.Quantifier)
 
 	// glob `*` essentially becomes `.*`, but excluding any separators
 	case ast.KindAny:
-		if len(sep) == 0 {
-			regex = ".*"
-		} else {
-			regex = fmt.Sprintf("[^%v]*", meta(string(sep)))
-		}
+		// `*` is more aggressive than
+		regex = dot(sep) + "*" + boundaryDummy
+
 	// glob `**` is just `.*`
 	case ast.KindSuper:
-		regex = ".*"
+		regex = ".*" + boundaryDummy
 
 	// glob `?` essentially becomes `.`, but excluding any separators
 	case ast.KindSingle:
-		if len(sep) == 0 {
-			regex = "."
-		} else {
-			regex = fmt.Sprintf("[^%v]", meta(string(sep)))
-		}
+		regex = dot(sep)
 
 	case ast.KindNothing:
 		regex = ""
@@ -125,7 +138,8 @@ func compile(tree *ast.Node, sep []rune) (string, error) {
 	// text just matches text, after we escape any special regexp chars
 	case ast.KindText:
 		t := tree.Value.(ast.Text)
-		regex = meta(t.Text)
+		regex = meta(t.Text) + boundaryDummy
+		fmt.Println(t.Text)
 
 	default:
 		return "", fmt.Errorf("could not compile tree: unknown node type")
@@ -142,6 +156,22 @@ func Compile(tree *ast.Node, sep []rune) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
+	index := strings.Index(regex, closeNegDummy)
+	if index > 0 {
+		index++
+		extraNum :=
+			// (strings.Count(regex[index:], ")"+boundaryDummy)-
+			// 	strings.Count(regex[index:], "\\)"+boundaryDummy)) <= 0 &&
+			strings.Contains(regex[index:], boundaryDummy)
+
+		if extraNum {
+			regex = strings.Replace(regex, closeNegDummy, "", -1)
+		} else {
+			regex = strings.Replace(regex, closeNegDummy, "$", -1)
+		}
+	}
+	regex = strings.Replace(regex, boundaryDummy, "", -1)
 	// globs are expected to match against the whole thing
 	return "\\A" + regex + "\\z", nil
 }
