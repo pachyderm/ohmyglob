@@ -5,7 +5,7 @@ import (
 	"github.com/pachyderm/glob/syntax/lexer"
 )
 
-func Parse(s string) (*ast.Node, ast.CompilerToUse, error) {
+func Parse(s string) (*ast.Node, error) {
 	return ast.Parse(lexer.NewLexer(s))
 }
 

@@ -9,20 +9,13 @@ import (
 	"github.com/pachyderm/glob/syntax/lexer"
 )
 
-type CompilerToUse int
-
-const (
-	Regexp CompilerToUse = iota
-	PCRE
-)
-
 type Lexer interface {
 	Next() lexer.Token
 }
 
-type parseFn func(*Node, CompilerToUse, Lexer) (parseFn, *Node, CompilerToUse, error)
+type parseFn func(*Node, Lexer) (parseFn, *Node, error)
 
-func Parse(lexer Lexer) (*Node, CompilerToUse, error) {
+func Parse(lexer Lexer) (*Node, error) {
 	var parser parseFn
 
 	root := NewNode(KindPattern, nil)
@@ -31,45 +24,44 @@ func Parse(lexer Lexer) (*Node, CompilerToUse, error) {
 		tree *Node
 		err  error
 	)
-	comp := Regexp
 	for parser, tree = parserMain, root; parser != nil; {
-		parser, tree, comp, err = parser(tree, comp, lexer)
+		parser, tree, err = parser(tree, lexer)
 		if err != nil {
-			return nil, comp, err
+			return nil, err
 		}
 	}
 
-	return root, comp, nil
+	return root, nil
 }
 
-func parserMain(tree *Node, comp CompilerToUse, lex Lexer) (parseFn, *Node, CompilerToUse, error) {
+func parserMain(tree *Node, lex Lexer) (parseFn, *Node, error) {
 	for {
 		token := lex.Next()
 		switch token.Type {
 		case lexer.EOF:
-			return nil, tree, comp, nil
+			return nil, tree, nil
 
 		case lexer.Error:
-			return nil, tree, comp, errors.New(token.Raw)
+			return nil, tree, errors.New(token.Raw)
 
 		case lexer.Text:
 			Insert(tree, NewNode(KindText, Text{Text: token.Raw}))
-			return parserMain, tree, comp, nil
+			return parserMain, tree, nil
 
 		case lexer.Any:
 			Insert(tree, NewNode(KindAny, nil))
-			return parserMain, tree, comp, nil
+			return parserMain, tree, nil
 
 		case lexer.Super:
 			Insert(tree, NewNode(KindSuper, nil))
-			return parserMain, tree, comp, nil
+			return parserMain, tree, nil
 
 		case lexer.Single:
 			Insert(tree, NewNode(KindSingle, nil))
-			return parserMain, tree, comp, nil
+			return parserMain, tree, nil
 
 		case lexer.RangeOpen:
-			return parserRange, tree, comp, nil
+			return parserRange, tree, nil
 
 		case lexer.TermsOpen:
 			a := NewNode(KindAnyOf, nil)
@@ -78,40 +70,37 @@ func parserMain(tree *Node, comp CompilerToUse, lex Lexer) (parseFn, *Node, Comp
 			p := NewNode(KindPattern, nil)
 			Insert(a, p)
 
-			return parserMain, p, comp, nil
+			return parserMain, p, nil
 
 		case lexer.CaptureOpen:
-			if strings.ContainsAny(token.Raw, "!") {
-				comp = PCRE
-			}
 			a := NewNode(KindCapture, Capture{token.Raw[:1]})
 			Insert(tree, a)
 
 			p := NewNode(KindPattern, nil)
 			Insert(a, p)
 
-			return parserMain, p, comp, nil
+			return parserMain, p, nil
 
 		case lexer.Separator:
 			p := NewNode(KindPattern, nil)
 			Insert(tree.Parent, p)
 
-			return parserMain, p, comp, nil
+			return parserMain, p, nil
 
 		case lexer.TermsClose:
-			return parserMain, tree.Parent.Parent, comp, nil
+			return parserMain, tree.Parent.Parent, nil
 
 		case lexer.CaptureClose:
-			return parserMain, tree.Parent.Parent, comp, nil
+			return parserMain, tree.Parent.Parent, nil
 
 		default:
-			return nil, tree, comp, fmt.Errorf("unexpected token: %s", token)
+			return nil, tree, fmt.Errorf("unexpected token: %s", token)
 		}
 	}
-	return nil, tree, comp, fmt.Errorf("unknown error")
+	return nil, tree, fmt.Errorf("unknown error")
 }
 
-func parserRange(tree *Node, comp CompilerToUse, lex Lexer) (parseFn, *Node, CompilerToUse, error) {
+func parserRange(tree *Node, lex Lexer) (parseFn, *Node, error) {
 	var (
 		not   bool
 		lo    rune
@@ -122,10 +111,10 @@ func parserRange(tree *Node, comp CompilerToUse, lex Lexer) (parseFn, *Node, Com
 		token := lex.Next()
 		switch token.Type {
 		case lexer.EOF:
-			return nil, tree, comp, errors.New("unexpected end")
+			return nil, tree, errors.New("unexpected end")
 
 		case lexer.Error:
-			return nil, tree, comp, errors.New(token.Raw)
+			return nil, tree, errors.New(token.Raw)
 
 		case lexer.Not:
 			not = true
@@ -133,7 +122,7 @@ func parserRange(tree *Node, comp CompilerToUse, lex Lexer) (parseFn, *Node, Com
 		case lexer.RangeLo:
 			r, w := utf8.DecodeRuneInString(token.Raw)
 			if len(token.Raw) > w {
-				return nil, tree, comp, fmt.Errorf("unexpected length of lo character")
+				return nil, tree, fmt.Errorf("unexpected length of lo character")
 			}
 			lo = r
 
@@ -143,13 +132,13 @@ func parserRange(tree *Node, comp CompilerToUse, lex Lexer) (parseFn, *Node, Com
 		case lexer.RangeHi:
 			r, w := utf8.DecodeRuneInString(token.Raw)
 			if len(token.Raw) > w {
-				return nil, tree, comp, fmt.Errorf("unexpected length of lo character")
+				return nil, tree, fmt.Errorf("unexpected length of lo character")
 			}
 
 			hi = r
 
 			if hi < lo {
-				return nil, tree, comp, fmt.Errorf("hi character '%s' should be greater than lo '%s'", string(hi), string(lo))
+				return nil, tree, fmt.Errorf("hi character '%s' should be greater than lo '%s'", string(hi), string(lo))
 			}
 
 		case lexer.Text:
@@ -164,7 +153,7 @@ func parserRange(tree *Node, comp CompilerToUse, lex Lexer) (parseFn, *Node, Com
 			}
 
 			if isChars == isRange {
-				return nil, tree, comp, fmt.Errorf("could not parse range")
+				return nil, tree, fmt.Errorf("could not parse range")
 			}
 
 			if isPOSIX {
@@ -185,7 +174,7 @@ func parserRange(tree *Node, comp CompilerToUse, lex Lexer) (parseFn, *Node, Com
 				}))
 			}
 
-			return parserMain, tree, comp, nil
+			return parserMain, tree, nil
 		}
 	}
 }
