@@ -263,7 +263,188 @@ func TestExtGlob(t *testing.T) {
 			if result != test.should {
 				t.Errorf(
 					"pattern %q matching %q should be %v but got %v\n%s",
-					test.pattern, test.match, test.should, result, g.r,
+					test.pattern, test.match, test.should, result, g.p,
+				)
+			}
+		})
+	}
+}
+
+func TestNegationGlob(t *testing.T) {
+	for _, test := range []test{
+		// test that the dummy strings work
+		glob(true, "\\\\$..!(!())", "\\$.."),
+
+		// since the method used here is based on micromatch/extglob,
+		// i've included a fix for https://github.com/micromatch/extglob/issues/10
+		glob(false, "!(*.js|*.json)", "a.js"),
+		glob(true, "!(*.js|*.json)", "a.js.gz"),
+		glob(true, "!(*.js|*.json)", "a.json.gz"),
+		glob(true, "!(*.js|*.json)", "a.gz"),
+		glob(false, "!(*.js|*.json)", "a.js"),
+
+		glob(true, "a*!(x)", "a"),
+		glob(true, "a*!(x)", "ab"),
+		glob(false, "a*!(x)", "ba"),
+		glob(true, "a*!(x)", "ax"),
+		glob(true, "a!(x)", "a"),
+		glob(true, "a!(x)", "ab"),
+		glob(false, "a!(x)", "ba"),
+		glob(false, "a!(x)", "ax"),
+
+		glob(true, "!(x)", "foo"),
+		glob(true, "!(x)", "foo/bar"),
+		glob(false, "!(x)", "foo/bar", '/'),
+		glob(true, "!(x)*", "foo"),
+		glob(false, "!(foo)", "foo"),
+		glob(true, "!(!(foo))", "foo"),
+		glob(false, "!(!(!(foo)))", "foo"),
+		glob(true, "!(!(!(!(foo))))", "foo"),
+		glob(false, "!(foo)*", "foo"), // Bash 4.3 disagrees!
+		glob(true, "!(foo)", "foobar"),
+		glob(false, "!(foo)*", "foobar"),        // Bash 4.3 disagrees!
+		glob(false, "!(*.*).!(*.*)", "moo.cow"), // Bash 4.3 disagrees!
+		glob(false, "!(*.*).!(*.*)", "mad.moo.cow"),
+		glob(false, "mu!(*(c))?.pa!(*(z))?", "mucca.pazza"),
+		glob(true, "!(f)", "fff"),
+		glob(true, "*(!(f))", "fff"),
+		glob(true, "+(!(f))", "fff"),
+		glob(true, "!(f)", "ooo"),
+		glob(true, "*(!(f))", "ooo"),
+		glob(true, "+(!(f))", "ooo"),
+		glob(true, "!(f)", "foo"),
+		glob(true, "*(!(f))", "foo"),
+		glob(true, "+(!(f))", "foo"),
+		glob(false, "!(f)", "f"),
+		glob(false, "*(!(f))", "f"),
+		glob(false, "+(!(f))", "f"),
+		glob(true, "@(!(z*)|*x)", "foot"),
+		glob(false, "@(!(z*)|*x)", "zoot"),
+		glob(true, "@(!(z*)|*x)", "foox"),
+		glob(true, "@(!(z*)|*x)", "zoox"),
+		glob(false, "*(!(foo))", "foo"), // Bash 4.3 disagrees!
+		glob(false, "!(foo)b*", "foob"),
+		glob(false, "!(foo)b*", "foobb"), // Bash 4.3 disagrees!
+
+		glob(true, "*.!(js|css)", "bar.min.js"),
+		glob(false, "!*.+(js|css)", "bar.min.js"),
+		glob(true, "*.+(js|css)", "bar.min.js"),
+
+		glob(true, "*(*.json|!(*.js))", "other.bar"),
+		glob(true, "*(*.json|!(*.js))*", "other.bar"),
+		glob(false, "!(*(*.json|!(*.js)))*", "other.bar"),
+		glob(true, "+(*.json|!(*.js))", "other.bar"),
+		glob(true, "@(*.json|!(*.js))", "other.bar"),
+		glob(true, "?(*.json|!(*.js))", "other.bar"),
+
+		glob(false, "*.!(js)*.!(xy)", "asd.js.xyz"),
+		glob(false, "*.!(js)*.!(xy)*", "asd.js.xyz"),
+		glob(false, "*.!(js)*.!(xyz)", "asd.js.xyz"),
+		glob(false, "*.!(js)*.!(xyz)*", "asd.js.xyz"),
+		glob(false, "*.!(js).!(xy)", "asd.js.xyz"),
+		glob(false, "*.!(js).!(xy)*", "asd.js.xyz"),
+		glob(false, "*.!(js).!(xyz)", "asd.js.xyz"),
+		glob(false, "*.!(js).!(xyz)*", "asd.js.xyz"),
+
+		glob(true, "*.!(j)", "a-integration-test.js"),
+		glob(false, "*.!(js)", "a-integration-test.js"),
+		glob(false, "!(*-integration-test.js)", "a-integration-test.js"),
+		glob(true, "*-!(integration-)test.js", "a-integration-test.js"),
+		glob(false, "*-!(integration)-test.js", "a-integration-test.js"),
+		glob(true, "*!(-integration)-test.js", "a-integration-test.js"),
+		glob(true, "*!(-integration-)test.js", "a-integration-test.js"),
+		glob(true, "*!(integration)-test.js", "a-integration-test.js"),
+		glob(true, "*!(integration-test).js", "a-integration-test.js"),
+		glob(true, "*-!(integration-test).js", "a-integration-test.js"),
+		glob(true, "*-!(integration-test.js)", "a-integration-test.js"),
+		glob(false, "*-!(integra)tion-test.js", "a-integration-test.js"),
+		glob(false, "*-integr!(ation)-test.js", "a-integration-test.js"),
+		glob(false, "*-integr!(ation-t)est.js", "a-integration-test.js"),
+		glob(false, "*-i!(ntegration-)test.js", "a-integration-test.js"),
+		glob(true, "*i!(ntegration-)test.js", "a-integration-test.js"),
+		glob(true, "*te!(gration-te)st.js", "a-integration-test.js"),
+		glob(false, "*-!(integration)?test.js", "a-integration-test.js"),
+		glob(true, "*?!(integration)?test.js", "a-integration-test.js"),
+
+		glob(true, "*!(js)", "foo.js.js"),
+		glob(true, "*!(.js)", "foo.js.js"),
+		glob(true, "*!(.js.js)", "foo.js.js"),
+		glob(true, "*!(.js.js)*", "foo.js.js"),
+		glob(false, "*(.js.js)", "foo.js.js"),
+		glob(true, "**(.js.js)", "foo.js.js"),
+		glob(true, "*(!(.js.js))", "foo.js.js"),
+		glob(false, "*.!(js)*.!(js)", "foo.js.js"),
+		glob(false, "*.!(js)+", "foo.js.js"),
+		glob(true, "!(*(.js.js))", "foo.js.js"),
+		glob(true, "*.!(js)", "foo.js.js"),
+		glob(false, "*.!(js)*", "foo.js.js"),    // Bash 4.3 disagrees,
+		glob(false, "*.!(js)*.js", "foo.js.js"), // Bash 4.3 disagrees,
+
+		glob(true, "*/**(.*)", "a/foo.js.js"),
+		glob(true, "*/**(.*.*)", "a/foo.js.js"),
+		glob(true, "a/**(.*.*)", "a/foo.js.js"),
+		glob(true, "*/**(.js.js)", "a/foo.js.js"),
+		glob(true, "a/f*(!(.js.js))", "a/foo.js.js"),
+		glob(true, "a/!(*(.*))", "a/foo.js.js"),
+		glob(true, "a/!(+(.*))", "a/foo.js.js"),
+		glob(true, "a/!(*(.*.*))", "a/foo.js.js"),
+		glob(true, "*/!(*(.*.*))", "a/foo.js.js"),
+		glob(true, "a/!(*(.js.js))", "a/foo.js.js"),
+
+		glob(true, "*(*.json|!(*.js))", "testjson.json"),
+		glob(true, "+(*.json|!(*.js))", "testjson.json"),
+		glob(true, "@(*.json|!(*.js))", "testjson.json"),
+		glob(true, "?(*.json|!(*.js))", "testjson.json"),
+
+		glob(false, "*(*.json|!(*.js))", "foojs.js"), // Bash 4.3 disagrees
+		glob(true, "*(*.json|!(*.js))*", "foojs.js"),
+		glob(false, "+(*.json|!(*.js))", "foojs.js"), // Bash 4.3 disagrees
+		glob(false, "@(*.json|!(*.js))", "foojs.js"),
+		glob(false, "?(*.json|!(*.js))", "foojs.js"),
+
+		glob(true, "!(*.a|*.b|*.c)", "a"),
+		glob(false, "!(*.[a-b]*)", "a.a"),
+		glob(false, "!(*.a|*.b|*.c)", "a.a"),
+		glob(false, "!(*[a-b].[a-b]*)", "a.a"),
+		glob(false, "!*.(a|b)", "a.a"),
+		glob(false, "!*.(a|b)*", "a.a"),
+		glob(false, "*.!(a)", "a.a"),
+		glob(false, "*.+(b|d)", "a.a"),
+		glob(false, "!(*.[a-b]*)", "a.a.a"),
+		glob(false, "!(*[a-b].[a-b]*)", "a.a.a"),
+		glob(false, "!*.(a|b)", "a.a.a"),
+		glob(false, "!*.(a|b)*", "a.a.a"),
+		glob(true, "!(*.a|*.b|*.c)", "a.abcd"), // micromatch/extglob disagrees
+		glob(true, "!(*.a|*.b|*.c)", "c.cbad"), // but interestingly, agrees here
+		glob(false, "!(*.a|*.b|*.c)*", "a.abcd"),
+		glob(true, "*.!(a|b|c)", "a.abcd"), // micromatch/extglob disagrees
+		glob(false, "*.!(a|b|c)*", "a.abcd"),
+		glob(false, "!(*.*)", "a.b"),
+		glob(false, "!(*.[a-b]*)", "a.b"),
+		glob(false, "!(*[a-b].[a-b]*)", "a.b"),
+		glob(false, "!*.(a|b)", "a.b"),
+		glob(false, "!*.(a|b)*", "a.b"),
+		glob(false, "!(*.[a-b]*)", "a.bb"),
+		glob(false, "!(*[a-b].[a-b]*)", "a.bb"),
+		glob(false, "!*.(a|b)", "a.bb"),
+		glob(false, "!*.(a|b)*", "a.bb"),
+		glob(false, "!*.(a|b)", "a.ccc"),
+		glob(false, "!*.(a|b)*", "a.ccc"),
+		glob(false, "*.+(b|d)", "a.ccc"),
+		glob(false, "!(*.js)", "a.js"),
+		glob(false, "*.!(js)", "a.js"),
+		glob(false, "!(*.js)", "a.js.js"),
+	} {
+		t.Run("Negated", func(t *testing.T) {
+			g, err := Compile(test.pattern, test.delimiters...)
+			if err != nil {
+				t.Fatal(err)
+			}
+			result := g.Match(test.match)
+			if result != test.should {
+				t.Errorf(
+					"pattern %q matching %q should be %v but got %v\n%s",
+					test.pattern, test.match, test.should, result, g.p,
 				)
 			}
 		})
