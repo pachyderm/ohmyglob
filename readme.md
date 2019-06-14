@@ -92,6 +92,52 @@ func main() {
     g.Match("rat") // true
     g.Match("at") // false
     g.Match("zat") // false
+
+// create glob with extended glob patterns
+    g = glob.MustCompile("@(a)")
+    g.Match("") // false
+    g.Match("a") // true
+    g.Match("aa") // false
+    g.Match("aaa") // false
+    g.Match("aaX") // false
+    g.Match("bbb") // false
+
+    g = glob.MustCompile("*(a)")
+    g.Match("") // true
+    g.Match("a") // true
+    g.Match("aa") // true
+    g.Match("aaa") // true
+    g.Match("aaX") // false
+    g.Match("bbb") // false
+
+    g = glob.MustCompile("+(a)")
+    g.Match("") // false
+    g.Match("a") // true
+    g.Match("aa") // true
+    g.Match("aaa") // true
+    g.Match("aaX") // false
+    g.Match("bbb") // false
+
+    g = glob.MustCompile("?(a)")
+    g.Match("") // true
+    g.Match("a") // true
+    g.Match("aa") // false
+    g.Match("aaa") // false
+    g.Match("aaX") // false
+    g.Match("bbb") // false
+
+    g = glob.MustCompile("!(a)")
+    g.Match("") // true
+    g.Match("a") // false
+    g.Match("aa") // true
+    g.Match("aaa") // true
+    g.Match("aaX") // true
+    g.Match("bbb") // true
+
+// create a glob and get the capture groups
+    g = glob.MustCompile("test/a*(a|b)/*(*).go")
+    g.Capture("test/aaaa/x.go") // ["test/aaaa/x.go", "aaa", "x"]
+
 }
 
 ```
