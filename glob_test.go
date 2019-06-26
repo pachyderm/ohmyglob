@@ -142,10 +142,6 @@ func TestGlob(t *testing.T) {
 		glob(true, "*//{,*.}example.com", "http://example.com"),
 		glob(false, "*//{,*.}example.com", "http://example.com.net"),
 
-		glob(true, "*/*/*", "foo/bb/aa/rr"),
-		glob(false, "*/*/*", "foo/bb/aa/rr", '/'),
-		glob(true, "**/**/**", "foo/bb/aa/rr", '/'),
-
 		glob(true, pattern_all, fixture_all_match),
 		glob(false, pattern_all, fixture_all_mismatch),
 
@@ -181,7 +177,7 @@ func TestGlob(t *testing.T) {
 			if result != test.should {
 				t.Errorf(
 					"pattern %q matching %q should be %v but got %v\n%s",
-					test.pattern, test.match, test.should, result, g.p,
+					test.pattern, test.match, test.should, result, g.r,
 				)
 			}
 		})
