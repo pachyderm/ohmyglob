@@ -39,9 +39,6 @@ func TestCaptureGlob(t *testing.T) {
 		capture("test/@(a|b)/x.go", "test/a/x.go", "a"),
 		capture("test/@(a|b)/x.go", "test/b/x.go", "b"),
 
-		capture("test/!(a|b)/x.go", "test/x/x.go", "x"),
-		capture("test/!(a|b)/x.go", "test/y/x.go", "y"),
-
 		// multi captures
 		capture("test/(a|b)/(*).go", "test/a/x.go", "a", "x"),
 		capture("test/+(a|b)/(*).go", "test/ab/x.go", "ab", "x"),
@@ -59,7 +56,7 @@ func TestCaptureGlob(t *testing.T) {
 			}
 			results := g.Capture(test.match)
 
-			if len(results) > 0 {
+			if results != nil {
 				test.submatches = append([]string{test.match}, test.submatches...)
 			}
 
