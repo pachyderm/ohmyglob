@@ -290,65 +290,50 @@ func (l *lexer) fetchItem() {
 }
 
 func (l *lexer) fetchRange() {
-	var wantHi bool
-	var wantClose bool
 	var seenNot bool
-	var isPOSIX bool
+	var inPOSIX bool
+	var escaped bool
+	var data []rune
+
+reading:
 	for {
 		r := l.read()
 		if r == eof {
 			l.errorf("unexpected end of input")
 			return
 		}
-
-		if r == char_range_open {
-			if n, _ := l.peek(); n == ':' || n == '^' || n == '!' {
-				isPOSIX = true
-				l.read()
+		if !escaped {
+			if r == char_escape {
+				escaped = true
+				continue
 			}
-		}
-
-		if wantClose {
-			if r != char_range_close {
-				l.errorf("expected close range character")
-			} else {
-				l.tokens.push(Token{RangeClose, string(r)})
+			if r == char_range_open {
+				inPOSIX = true
 			}
-			if isPOSIX {
-				// read the second bracket
-				r = l.read()
-				if r != char_range_close {
-					l.errorf("expected close range character")
+
+			if r == char_range_close {
+				if inPOSIX {
+					inPOSIX = false
+				} else {
+
+					break reading
 				}
 			}
-			return
+
+			if !seenNot && (r == char_not_exclaim || r == char_not_caret) {
+				l.tokens.push(Token{Not, string(r)})
+				seenNot = true
+				continue
+			}
 		}
 
-		if wantHi {
-			l.tokens.push(Token{RangeHi, string(r)})
-			wantClose = true
-			continue
-		}
-
-		if !seenNot && (r == char_not_exclaim || r == char_not_caret) {
-			l.tokens.push(Token{Not, string(r)})
-			seenNot = true
-			continue
-		}
-
-		if n, w := l.peek(); n == char_range_between {
-			l.seek(w)
-			l.tokens.push(Token{RangeLo, string(r)})
-			l.tokens.push(Token{RangeBetween, string(n)})
-			wantHi = true
-			continue
-		}
-
-		l.unread() // unread first peek and fetch as text
-		l.fetchText([]rune{char_range_close})
-		wantClose = true
+		escaped = false
+		data = append(data, r)
 	}
-
+	if len(data) > 0 {
+		l.tokens.push(Token{Text, string(data)})
+	}
+	l.tokens.push(Token{RangeClose, string(']')})
 }
 
 func (l *lexer) fetchText(breakers []rune) {

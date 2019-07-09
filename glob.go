@@ -1,7 +1,9 @@
 package glob
 
 import (
-	"regexp"
+	"time"
+
+	"github.com/dlclark/regexp2"
 
 	"github.com/pachyderm/glob/compiler"
 	"github.com/pachyderm/glob/syntax"
@@ -9,7 +11,7 @@ import (
 
 // Glob represents compiled glob pattern.
 type Glob struct {
-	r *regexp.Regexp
+	r *regexp2.Regexp
 }
 
 // Compile creates Glob for given pattern and strings (if any present after pattern) as separators.
@@ -41,31 +43,32 @@ type Glob struct {
 //    extended-glob:
 //        `(` { `|` pattern } `)`
 //        `@(` { `|` pattern } `)`
-//                    capture one of pipe-separated subpatterns
+//                    match and capture one of pipe-separated subpatterns
 //        `*(` { `|` pattern } `)`
-//                    capture any number of of pipe-separated subpatterns
+//                    match and capture any number of the pipe-separated subpatterns
 //        `+(` { `|` pattern } `)`
-//                    capture one or more of of pipe-separated subpatterns
+//                    match and capture one or more of the pipe-separated subpatterns
 //        `?(` { `|` pattern } `)`
-//                    capture zero or one of of pipe-separated subpatterns
+//                    match and capture zero or one of the pipe-separated subpatterns
+//        `!(` { `|` pattern } `)`
+//                    match and capture anything except one of the pipe-separated subpatterns
 //
 func Compile(pattern string, separators ...rune) (*Glob, error) {
-	ast, err := syntax.Parse(pattern)
+	tree, err := syntax.Parse(pattern)
 	if err != nil {
 		return nil, err
 	}
 
-	regex, err := compiler.Compile(ast, separators)
+	regex, err := compiler.Compile(tree, separators)
 	if err != nil {
 		return nil, err
 	}
-
-	r, err := regexp.Compile(regex)
+	r, err := regexp2.Compile(regex, 0)
+	r.MatchTimeout = time.Minute * 5 // if it takes more than 5minutes to match a glob, something is very wrong
 	if err != nil {
 		return nil, err
 	}
-
-	return &Glob{r}, nil
+	return &Glob{r: r}, nil
 }
 
 // MustCompile is the same as Compile, except that if Compile returns error, this will panic
@@ -77,12 +80,33 @@ func MustCompile(pattern string, separators ...rune) *Glob {
 	return g
 }
 
+// Match tests the fixture against the compiled pattern, and return true for a match
 func (g *Glob) Match(fixture string) bool {
-	return g.r.MatchString(fixture)
+	m, err := g.r.MatchString(fixture)
+	if err != nil {
+		// this is taking longer than 5 minutes, so something is seriously wrong
+		panic(err)
+	}
+	return m
 }
 
+// Capture returns the list of subexpressions captured while testing the fixture against the compiled pattern
 func (g *Glob) Capture(fixture string) []string {
-	return g.r.FindStringSubmatch(fixture)
+	m, err := g.r.FindStringMatch(fixture)
+	if err != nil {
+		// this is taking longer than 5 minutes, so something is seriously wrong
+		panic(err)
+	}
+	if m == nil {
+		return nil
+	}
+	groups := m.Groups()
+	captures := make([]string, 0, len(groups))
+
+	for _, gp := range groups {
+		captures = append(captures, gp.Capture.String())
+	}
+	return captures
 }
 
 // QuoteMeta returns a string that quotes all glob pattern meta characters

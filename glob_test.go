@@ -124,6 +124,8 @@ func TestGlob(t *testing.T) {
 		glob(true, "[[:^alpha:]]", "."),
 		glob(true, "[^[:alpha:]]", "."),
 		glob(true, "[[:space:]]", "\t"),
+		glob(true, "[[:graph:]]", "!"),
+		glob(false, "[![:graph:]]", "!"),
 		glob(true, "/{rate,[a-z][a-z][a-z]}*", "/rate"),
 		glob(true, "/{rate,[0-9][0-9][0-9]}*", "/rate"),
 		glob(true, "/{rate,[a-z][a-z][a-z]}*", "/usd"),
@@ -141,6 +143,10 @@ func TestGlob(t *testing.T) {
 		glob(true, "*//{,*.}example.com", "https://www.example.com"),
 		glob(true, "*//{,*.}example.com", "http://example.com"),
 		glob(false, "*//{,*.}example.com", "http://example.com.net"),
+
+		glob(true, "*/*/*", "foo/bb/aa/rr"),
+		glob(false, "*/*/*", "foo/bb/aa/rr", '/'),
+		glob(true, "**/**/**", "foo/bb/aa/rr", '/'),
 
 		glob(true, pattern_all, fixture_all_match),
 		glob(false, pattern_all, fixture_all_mismatch),
