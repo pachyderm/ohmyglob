@@ -43,21 +43,23 @@ type Glob struct {
 //    extended-glob:
 //        `(` { `|` pattern } `)`
 //        `@(` { `|` pattern } `)`
-//                    capture one of pipe-separated subpatterns
+//                    match and capture one of pipe-separated subpatterns
 //        `*(` { `|` pattern } `)`
-//                    capture any number of of pipe-separated subpatterns
+//                    match and capture any number of the pipe-separated subpatterns
 //        `+(` { `|` pattern } `)`
-//                    capture one or more of of pipe-separated subpatterns
+//                    match and capture one or more of the pipe-separated subpatterns
 //        `?(` { `|` pattern } `)`
-//                    capture zero or one of of pipe-separated subpatterns
+//                    match and capture zero or one of the pipe-separated subpatterns
+//        `!(` { `|` pattern } `)`
+//                    match and capture anything except one of the pipe-separated subpatterns
 //
 func Compile(pattern string, separators ...rune) (*Glob, error) {
-	ast, err := syntax.Parse(pattern)
+	tree, err := syntax.Parse(pattern)
 	if err != nil {
 		return nil, err
 	}
 
-	regex, err := compiler.Compile(ast, separators)
+	regex, err := compiler.Compile(tree, separators)
 	if err != nil {
 		return nil, err
 	}
@@ -78,6 +80,7 @@ func MustCompile(pattern string, separators ...rune) *Glob {
 	return g
 }
 
+// Match tests the fixture against the compiled pattern, and return true for a match
 func (g *Glob) Match(fixture string) bool {
 	m, err := g.r.MatchString(fixture)
 	if err != nil {
@@ -87,6 +90,7 @@ func (g *Glob) Match(fixture string) bool {
 	return m
 }
 
+// Capture returns the list of subexpressions captured while testing the fixture against the compiled pattern
 func (g *Glob) Capture(fixture string) []string {
 	m, err := g.r.FindStringMatch(fixture)
 	if err != nil {
