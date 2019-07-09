@@ -1,7 +1,9 @@
 package glob
 
 import (
-	"regexp"
+	"time"
+
+	"github.com/dlclark/regexp2"
 
 	"github.com/pachyderm/glob/compiler"
 	"github.com/pachyderm/glob/syntax"
@@ -9,7 +11,7 @@ import (
 
 // Glob represents compiled glob pattern.
 type Glob struct {
-	r *regexp.Regexp
+	r *regexp2.Regexp
 }
 
 // Compile creates Glob for given pattern and strings (if any present after pattern) as separators.
@@ -59,13 +61,12 @@ func Compile(pattern string, separators ...rune) (*Glob, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	r, err := regexp.Compile(regex)
+	r, err := regexp2.Compile(regex, 0)
+	r.MatchTimeout = time.Minute * 5 // if it takes more than 5minutes to match a glob, something is very wrong
 	if err != nil {
 		return nil, err
 	}
-
-	return &Glob{r}, nil
+	return &Glob{r: r}, nil
 }
 
 // MustCompile is the same as Compile, except that if Compile returns error, this will panic
@@ -78,11 +79,30 @@ func MustCompile(pattern string, separators ...rune) *Glob {
 }
 
 func (g *Glob) Match(fixture string) bool {
-	return g.r.MatchString(fixture)
+	m, err := g.r.MatchString(fixture)
+	if err != nil {
+		// this is taking longer than 5 minutes, so something is seriously wrong
+		panic(err)
+	}
+	return m
 }
 
 func (g *Glob) Capture(fixture string) []string {
-	return g.r.FindStringSubmatch(fixture)
+	m, err := g.r.FindStringMatch(fixture)
+	if err != nil {
+		// this is taking longer than 5 minutes, so something is seriously wrong
+		panic(err)
+	}
+	if m == nil {
+		return nil
+	}
+	groups := m.Groups()
+	captures := make([]string, 0, len(groups))
+
+	for _, gp := range groups {
+		captures = append(captures, gp.Capture.String())
+	}
+	return captures
 }
 
 // QuoteMeta returns a string that quotes all glob pattern meta characters

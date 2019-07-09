@@ -124,6 +124,8 @@ func TestGlob(t *testing.T) {
 		glob(true, "[[:^alpha:]]", "."),
 		glob(true, "[^[:alpha:]]", "."),
 		glob(true, "[[:space:]]", "\t"),
+		glob(true, "[[:graph:]]", "!"),
+		glob(false, "[![:graph:]]", "!"),
 		glob(true, "/{rate,[a-z][a-z][a-z]}*", "/rate"),
 		glob(true, "/{rate,[0-9][0-9][0-9]}*", "/rate"),
 		glob(true, "/{rate,[a-z][a-z][a-z]}*", "/usd"),

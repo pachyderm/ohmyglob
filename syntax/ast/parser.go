@@ -4,10 +4,26 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"unicode/utf8"
 
 	"github.com/pachyderm/glob/syntax/lexer"
 )
+
+var posix = map[string]string{
+	":alnum:":  "0-9A-Za-z",
+	":alpha:":  "A-Za-z",
+	":ascii:":  "\x00-\x7F",
+	":blank:":  "\t ",
+	":cntrl:":  "\x00-\x1F\x7F",
+	":digit:":  "0-9",
+	":graph:":  "!-~]",
+	":lower:":  "a-z",
+	":print:":  " -~",
+	":punct:":  "!-/:-@[-`{-~",
+	":space:":  "\t\n\v\f\r ",
+	":upper:":  "A-Z",
+	":word:":   "0-9A-Za-z_",
+	":xdigit:": "0-9A-Fa-f",
+}
 
 type Lexer interface {
 	Next() lexer.Token
@@ -103,8 +119,6 @@ func parserMain(tree *Node, lex Lexer) (parseFn, *Node, error) {
 func parserRange(tree *Node, lex Lexer) (parseFn, *Node, error) {
 	var (
 		not   bool
-		lo    rune
-		hi    rune
 		chars string
 	)
 	for {
@@ -119,60 +133,17 @@ func parserRange(tree *Node, lex Lexer) (parseFn, *Node, error) {
 		case lexer.Not:
 			not = true
 
-		case lexer.RangeLo:
-			r, w := utf8.DecodeRuneInString(token.Raw)
-			if len(token.Raw) > w {
-				return nil, tree, fmt.Errorf("unexpected length of lo character")
-			}
-			lo = r
-
-		case lexer.RangeBetween:
-			// do nothing
-
-		case lexer.RangeHi:
-			r, w := utf8.DecodeRuneInString(token.Raw)
-			if len(token.Raw) > w {
-				return nil, tree, fmt.Errorf("unexpected length of lo character")
-			}
-
-			hi = r
-
-			if hi < lo {
-				return nil, tree, fmt.Errorf("hi character '%s' should be greater than lo '%s'", string(hi), string(lo))
-			}
-
 		case lexer.Text:
 			chars = token.Raw
+			for k, v := range posix {
+				chars = strings.ReplaceAll(chars, k, v)
+			}
 
 		case lexer.RangeClose:
-			isRange := lo != 0 && hi != 0
-			isChars := chars != ""
-			isPOSIX := false
-			if len(chars) >= 2 && chars[:1] == ":" && chars[len(chars)-1:] == ":" {
-				isPOSIX = true
-			}
-
-			if isChars == isRange {
-				return nil, tree, fmt.Errorf("could not parse range")
-			}
-
-			if isPOSIX {
-				Insert(tree, NewNode(KindPOSIX, POSIX{
-					Not:   strings.ContainsAny(chars, "^!") || not,
-					Class: strings.Trim(chars, "[:]^!"),
-				}))
-			} else if isRange {
-				Insert(tree, NewNode(KindRange, Range{
-					Lo:  lo,
-					Hi:  hi,
-					Not: not,
-				}))
-			} else {
-				Insert(tree, NewNode(KindList, List{
-					Chars: chars,
-					Not:   not,
-				}))
-			}
+			Insert(tree, NewNode(KindList, List{
+				Chars: chars,
+				Not:   not,
+			}))
 
 			return parserMain, tree, nil
 		}
