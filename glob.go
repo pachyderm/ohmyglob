@@ -1,7 +1,10 @@
 package glob
 
 import (
+	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/dlclark/regexp2"
 
@@ -107,6 +110,94 @@ func (g *Glob) Capture(fixture string) []string {
 		captures = append(captures, gp.Capture.String())
 	}
 	return captures
+}
+
+// The code for the extract function is based on the extract function from https://golang.org/src/regexp/regexp.go
+// Additionally, the Replace function is based on the expand function from https://golang.org/src/regexp/regexp.go
+func extract(str string) (int, string, bool) {
+	var name, rest string
+	var num int
+	if len(str) < 2 || str[0] != '$' {
+		return num, rest, false
+	}
+	brace := false
+	if str[1] == '{' {
+		brace = true
+		str = str[2:]
+	} else {
+		str = str[1:]
+	}
+	i := 0
+	for i < len(str) {
+		rune, size := utf8.DecodeRuneInString(str[i:])
+		if !unicode.IsDigit(rune) {
+			break
+		}
+		i += size
+	}
+	if i == 0 {
+		// empty name is not okay
+		return num, rest, false
+	}
+	name = str[:i]
+	if brace {
+		if i >= len(str) || str[i] != '}' {
+			// missing closing brace
+			return num, rest, false
+		}
+		i++
+	}
+
+	// Parse number.
+	num = 0
+	for i := 0; i < len(name); i++ {
+		if name[i] < '0' || '9' < name[i] || num >= 1e8 {
+			num = -1
+			break
+		}
+		num = num*10 + int(name[i]) - '0'
+	}
+	// Disallow leading zeros.
+	if name[0] == '0' && len(name) > 1 {
+		num = -1
+	}
+
+	rest = str[i:]
+	return num, rest, true
+}
+
+// Replace runs the compiled pattern on the given fixture, and then replaces any instance of $n (or ${n}) in the template with the nth capture group
+func (g *Glob) Replace(fixture, template string) string {
+	result := ""
+	match := g.Capture(fixture)
+	for len(template) > 0 {
+		i := strings.Index(template, "$")
+		if i < 0 {
+			break
+		}
+		result += template[:i]
+		template = template[i:]
+		if len(template) > 1 && template[1] == '$' {
+			// Treat $$ as $.
+			result += "$"
+			template = template[2:]
+			continue
+		}
+		num, rest, ok := extract(template)
+
+		if !ok {
+			// Malformed; treat $ as raw text.
+			result += "$"
+			template = template[1:]
+			continue
+		}
+		template = rest
+		if num < len(match) {
+			result += match[num]
+		}
+	}
+	result += template
+	return result
 }
 
 // QuoteMeta returns a string that quotes all glob pattern meta characters
