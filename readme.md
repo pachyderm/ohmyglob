@@ -11,7 +11,7 @@ The parser, lexer, and general structure for this library are derived from the e
 ## Install
 
 ```shell
-    go get github.com/pachyderm/glob
+    go get github.com/pachyderm/ohmyglob
 ```
 
 ## Example
@@ -20,7 +20,7 @@ The parser, lexer, and general structure for this library are derived from the e
 
 package main
 
-import "github.com/pachyderm/glob"
+import "github.com/pachyderm/ohmyglob"
 
 func main() {
     var g glob.Glob

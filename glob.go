@@ -8,8 +8,8 @@ import (
 
 	"github.com/dlclark/regexp2"
 
-	"github.com/pachyderm/glob/compiler"
-	"github.com/pachyderm/glob/syntax"
+	"github.com/pachyderm/ohmyglob/compiler"
+	"github.com/pachyderm/ohmyglob/syntax"
 )
 
 // Glob represents compiled glob pattern.

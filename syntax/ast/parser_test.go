@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/pachyderm/glob/syntax/lexer"
+	"github.com/pachyderm/ohmyglob/syntax/lexer"
 )
 
 type stubLexer struct {

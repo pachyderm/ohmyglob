@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/pachyderm/glob/syntax/lexer"
+	"github.com/pachyderm/ohmyglob/syntax/lexer"
 )
 
 var posix = map[string]string{
