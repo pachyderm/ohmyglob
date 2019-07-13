@@ -21,7 +21,7 @@ The parser, lexer, and general structure for this library are derived from the e
 
 package main
 
-import "github.com/pachyderm/glob"
+import "github.com/pachyderm/ohmyglob"
 
 func main() {
     var g glob.Glob

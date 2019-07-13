@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/pachyderm/glob/syntax/ast"
+	"github.com/pachyderm/ohmyglob/syntax/ast"
 )
 
 // these dummy strings are not valid UTF-8, so we can use them without worrying about them also matching legitmate input
