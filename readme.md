@@ -1,4 +1,5 @@
 # Oh my glob! Go capture globbing library
+[![GoDoc](https://godoc.org/github.com/pachyderm/ohmyglob?status.svg)](https://godoc.org/github.com/pachyderm/ohmyglob)
 <img align="right" width="220" height="220" src="https://i.imgur.com/kQoBuaZ.png">
 
 This library allows you to use capture groups in globs
